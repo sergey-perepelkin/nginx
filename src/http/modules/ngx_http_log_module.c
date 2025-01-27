@@ -249,6 +249,16 @@ static ngx_http_log_var_t  ngx_http_log_vars[] = {
     { ngx_null_string, 0, NULL }
 };
 
+static ngx_int_t
+ngx_http_request_handler(ngx_http_request_t *r) {
+
+    //TODO: Add shared variable to log random number from another module
+     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
+                  "Request received: method=%V, uri=%V, protocol=%V",
+                  &r->method_name, &r->uri, &r->http_protocol);
+
+    return NGX_DECLINED;
+}
 
 static ngx_int_t
 ngx_http_log_handler(ngx_http_request_t *r)
@@ -263,6 +273,7 @@ ngx_http_log_handler(ngx_http_request_t *r)
     ngx_http_log_buf_t       *buffer;
     ngx_http_log_loc_conf_t  *lcf;
 
+    //TODO: Add shared variable to show random number from another module
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "http log handler");
 
@@ -1897,6 +1908,24 @@ ngx_http_log_init(ngx_conf_t *cf)
     }
 
     cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
+
+    /* Added handler to catch on request stage.
+
+    There could be implemented two ways of logging:
+    Method #1: Use current realization with new handler ngx_http_request_handler()
+    to write random number to log from another module
+
+    Method #2: Call ngx_http_log_handler() on NGX_HTTP_POST_READ_PHASE and
+    rewrite handler for requests and responses on different phases.
+    Handler ngx_http_request_handler() must be deleted, handler ngx_http_log_handler()
+    must be rewritten */
+
+    h = ngx_array_push(&cmcf->phases[NGX_HTTP_POST_READ_PHASE].handlers);
+    if (h == NULL) {
+        return NGX_ERROR;
+    }
+
+    *h = ngx_http_request_handler;
 
     h = ngx_array_push(&cmcf->phases[NGX_HTTP_LOG_PHASE].handlers);
     if (h == NULL) {
